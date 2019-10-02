@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:web_socket_channel/html.dart';
 
 void main() => runApp(MyApp());
 
@@ -102,9 +103,12 @@ class _MyHomePageState extends State<MyHomePage> {
       builder: (context, snapshot) {
         return Column(
           children: <Widget>[
-            Text(snapshot.hasData
-                ? '${snapshot.data}'
-                : '${snapshot.connectionState}'),
+            Text(
+              snapshot.hasData
+                  ? '${snapshot.data}'
+                  : '${snapshot.connectionState}',
+              style: TextStyle(color: _parseMessage('${snapshot.data}')),
+            ),
             Text(
               snapshot.hasError ? '${snapshot.error}' : '',
               style: TextStyle(color: Colors.red),
@@ -117,10 +121,25 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void _onConnect() {
     setState(() {
-      widget.channel = IOWebSocketChannel.connect(_connectionController.text);
+      widget.channel = HtmlWebSocketChannel.connect(_connectionController.text);
 
-      //widget.channel.sink.add('Hello');
+      //widget.channel.sink.add('255,0,0');
     });
+  }
+
+  Color _parseMessage(String message) {
+    if (message == null || message.isEmpty) {
+      return Colors.black;
+    }
+
+    var colors = message.split(",");
+
+    if (colors.length < 3) {
+      return Colors.black;
+    }
+
+    return Color.fromARGB(
+        255, int.parse(colors[0]), int.parse(colors[1]), int.parse(colors[2]));
   }
 
   @override
