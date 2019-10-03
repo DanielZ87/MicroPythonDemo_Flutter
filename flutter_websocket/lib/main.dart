@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/html.dart';
 import 'package:vector_math/vector_math.dart' as vector;
-
 import 'models/MessageModel.dart';
 
 void main() => runApp(MyApp());
@@ -16,15 +15,6 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Flutter Demo',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // Try running your application with "flutter run". You'll see the
-        // application has a blue toolbar. Then, without quitting the app, try
-        // changing the primarySwatch below to Colors.green and then invoke
-        // "hot reload" (press "r" in the console where you ran "flutter run",
-        // or simply save your changes to "hot reload" in a Flutter IDE).
-        // Notice that the counter didn't reset back to zero; the application
-        // is not restarted.
         primarySwatch: Colors.blue,
       ),
       home: MyHomePage(title: 'Flutter Demo Home Page'),
@@ -48,16 +38,6 @@ class _MyHomePageState extends State<MyHomePage> {
   double _xOffset = 0;
   double _yOffset = 45;
   double _zOffset = 0;
-
-  // set yOffset(double value) {
-  //   setState(() {
-  //     _yOffset = value;
-  //   });
-  // }
-
-  // double get yOffset {
-  //   return _yOffset;
-  // }
 
   final TextEditingController _connectionController =
       TextEditingController(text: 'ws://echo.websocket.org');
@@ -114,7 +94,11 @@ class _MyHomePageState extends State<MyHomePage> {
                   max: 90,
                   value: _xOffset,
                   onChanged: (newValue) {
-                    setState(() => _xOffset = newValue);
+                    setState(() {
+                      _xOffset = newValue;
+                    });
+
+                    sendManualValues();
                   },
                 ),
                 Slider(
@@ -123,6 +107,8 @@ class _MyHomePageState extends State<MyHomePage> {
                   value: _yOffset,
                   onChanged: (newValue) {
                     setState(() => _yOffset = newValue);
+
+                    sendManualValues();
                   },
                 ),
                 Slider(
@@ -131,6 +117,8 @@ class _MyHomePageState extends State<MyHomePage> {
                   value: _zOffset,
                   onChanged: (newValue) {
                     setState(() => _zOffset = newValue);
+
+                    sendManualValues();
                   },
                 )
               ],
@@ -144,6 +132,10 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Icon(Icons.add),
       ),
     );
+  }
+
+  void sendManualValues() {
+    widget.channel.sink.add('255,0;$_xOffset,$_yOffset,$_zOffset');
   }
 
   Widget getResponseWidget(WebSocketChannel channel) {
@@ -167,9 +159,9 @@ class _MyHomePageState extends State<MyHomePage> {
             Transform(
               transform: Matrix4.identity()
                 ..setEntry(3, 2, 0.001)
-                ..rotateY(vector.radians(_xOffset))
-                ..rotateX(vector.radians(_yOffset))
-                ..rotateZ(vector.radians(_zOffset)),
+                ..rotateY(vector.radians(parsedMessage.x))
+                ..rotateX(vector.radians(parsedMessage.y))
+                ..rotateZ(vector.radians(parsedMessage.z)),
               alignment: FractionalOffset.center,
               child: Container(
                 width: 100,
