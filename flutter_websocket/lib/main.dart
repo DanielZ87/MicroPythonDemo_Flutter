@@ -1,7 +1,9 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:web_socket_channel/io.dart';
+//import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/html.dart';
+import 'package:vector_math/vector_math.dart' as vector;
 
 void main() => runApp(MyApp());
 
@@ -32,7 +34,6 @@ class MyHomePage extends StatefulWidget {
   MyHomePage({Key key, this.title}) : super(key: key);
 
   final String title;
-
   WebSocketChannel channel;
 
   @override
@@ -42,12 +43,32 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   int _counter = 0;
 
+  double _xOffset = 0;
+  double _yOffset = 45;
+  double _zOffset = 0;
+
+  // set yOffset(double value) {
+  //   setState(() {
+  //     _yOffset = value;
+  //   });
+  // }
+
+  // double get yOffset {
+  //   return _yOffset;
+  // }
+
   final TextEditingController _connectionController =
       TextEditingController(text: 'ws://echo.websocket.org');
 
   void _incrementCounter() {
     setState(() {
-      _counter++;
+      _counter += 10;
+
+      var green = max(255 - _counter, 0);
+
+      var red = max(-255 + _counter, 0);
+
+      widget.channel.sink.add('$red,$green,0');
     });
   }
 
@@ -78,10 +99,40 @@ class _MyHomePageState extends State<MyHomePage> {
                   Text(
                     'Response:',
                   ),
-                  getStreamBuilder(widget.channel)
+                  getResponseWidget(widget.channel)
                 ],
               ),
             ),
+            ExpansionTile(
+              title: Text('Manual correction'),
+              children: <Widget>[
+                Text('$_xOffset'),
+                Slider(
+                  min: -90,
+                  max: 90,
+                  value: _xOffset,
+                  onChanged: (newValue) {
+                    setState(() => _xOffset = newValue);
+                  },
+                ),
+                Slider(
+                  min: -90,
+                  max: 90,
+                  value: _yOffset,
+                  onChanged: (newValue) {
+                    setState(() => _yOffset = newValue);
+                  },
+                ),
+                Slider(
+                  min: -90,
+                  max: 90,
+                  value: _zOffset,
+                  onChanged: (newValue) {
+                    setState(() => _zOffset = newValue);
+                  },
+                )
+              ],
+            )
           ],
         ),
       ),
@@ -93,7 +144,7 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  Widget getStreamBuilder(WebSocketChannel channel) {
+  Widget getResponseWidget(WebSocketChannel channel) {
     if (channel == null) {
       return Text('Please connect first');
     }
@@ -101,13 +152,38 @@ class _MyHomePageState extends State<MyHomePage> {
     return StreamBuilder(
       stream: widget.channel.stream,
       builder: (context, snapshot) {
+        var parsedMessage = MessageModel('${snapshot.data}');
+
         return Column(
           children: <Widget>[
             Text(
               snapshot.hasData
                   ? '${snapshot.data}'
                   : '${snapshot.connectionState}',
-              style: TextStyle(color: _parseMessage('${snapshot.data}')),
+              style: TextStyle(color: parsedMessage.color),
+            ),
+            Transform(
+              transform: Matrix4.identity()
+                ..setEntry(3, 2, 0.001)
+                ..rotateY(vector.radians(_xOffset))
+                ..rotateX(vector.radians(_yOffset))
+                ..rotateZ(vector.radians(_zOffset)),
+              alignment: FractionalOffset.center,
+              child: Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey,
+                    blurRadius: 20.0,
+                    spreadRadius: 5.0,
+                    offset: Offset(
+                      10.0,
+                      10.0,
+                    ),
+                  )
+                ], color: parsedMessage.color),
+              ),
             ),
             Text(
               snapshot.hasError ? '${snapshot.error}' : '',
@@ -123,23 +199,8 @@ class _MyHomePageState extends State<MyHomePage> {
     setState(() {
       widget.channel = HtmlWebSocketChannel.connect(_connectionController.text);
 
-      //widget.channel.sink.add('255,0,0');
+      widget.channel.sink.add('255,0;45,0,0');
     });
-  }
-
-  Color _parseMessage(String message) {
-    if (message == null || message.isEmpty) {
-      return Colors.black;
-    }
-
-    var colors = message.split(",");
-
-    if (colors.length < 3) {
-      return Colors.black;
-    }
-
-    return Color.fromARGB(
-        255, int.parse(colors[0]), int.parse(colors[1]), int.parse(colors[2]));
   }
 
   @override
@@ -147,5 +208,37 @@ class _MyHomePageState extends State<MyHomePage> {
     widget.channel.sink.close();
 
     super.dispose();
+  }
+}
+
+class MessageModel {
+  Color color = Colors.black;
+  double x = 0;
+  double y = 0;
+  double z = 0;
+
+  MessageModel(String message) {
+    if (message == null || message.isEmpty) {
+      return;
+    }
+
+    var components = message.split(";");
+
+    if (components.length < 2) {
+      return;
+    }
+
+    var colorComponents = components[0].split(",");
+    var axisComponents = components[1].split(",");
+
+    if (colorComponents.length < 2 || axisComponents.length < 3) {
+      return;
+    }
+
+    color = Color.fromARGB(
+        255, int.parse(colorComponents[0]), int.parse(colorComponents[1]), 0);
+    x = double.parse(axisComponents[0]);
+    y = double.parse(axisComponents[1]);
+    z = double.parse(axisComponents[2]);
   }
 }
