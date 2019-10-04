@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 //import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
@@ -36,7 +37,7 @@ class _MyHomePageState extends State<MyHomePage> {
   int _counter = 0;
 
   double _xOffset = 0;
-  double _yOffset = 45;
+  double _yOffset = 0;
   double _zOffset = 0;
 
   final TextEditingController _connectionController =
@@ -146,6 +147,19 @@ class _MyHomePageState extends State<MyHomePage> {
     return StreamBuilder(
       stream: widget.channel.stream,
       builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              Icon(
+                Icons.error,
+                color: Colors.red,
+              ),
+              Text('${snapshot.error}'),
+            ],
+          );
+        }
+
         var parsedMessage = MessageModel('${snapshot.data}');
 
         return Column(
@@ -156,32 +170,31 @@ class _MyHomePageState extends State<MyHomePage> {
                   : '${snapshot.connectionState}',
               style: TextStyle(color: parsedMessage.color),
             ),
-            Transform(
-              transform: Matrix4.identity()
-                ..setEntry(3, 2, 0.001)
-                ..rotateY(vector.radians(parsedMessage.x))
-                ..rotateX(vector.radians(parsedMessage.y))
-                ..rotateZ(vector.radians(parsedMessage.z)),
-              alignment: FractionalOffset.center,
-              child: Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey,
-                    blurRadius: 20.0,
-                    spreadRadius: 5.0,
-                    offset: Offset(
-                      10.0,
-                      10.0,
-                    ),
-                  )
-                ], color: parsedMessage.color),
-              ),
-            ),
-            Text(
-              snapshot.hasError ? '${snapshot.error}' : '',
-              style: TextStyle(color: Colors.red),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: <Widget>[
+                new AxisWidget(
+                  title: 'Y',
+                  parsedMessage: parsedMessage,
+                  rotate: (message, matrix) {
+                    matrix.rotateX(vector.radians(message.y));
+                  },
+                ),
+                new AxisWidget(
+                  title: 'X',
+                  parsedMessage: parsedMessage,
+                  rotate: (message, matrix) {
+                    matrix.rotateY(vector.radians(message.x));
+                  },
+                ),
+                new AxisWidget(
+                  title: 'Z',
+                  parsedMessage: parsedMessage,
+                  rotate: (message, matrix) {
+                    matrix.rotateZ(vector.radians(message.z));
+                  },
+                )
+              ],
             ),
           ],
         );
@@ -202,5 +215,55 @@ class _MyHomePageState extends State<MyHomePage> {
     widget.channel.sink.close();
 
     super.dispose();
+  }
+}
+
+class AxisWidget extends StatelessWidget {
+  const AxisWidget({
+    Key key,
+    @required this.parsedMessage,
+    @required this.rotate,
+    @required this.title,
+  }) : super(key: key);
+
+  final MessageModel parsedMessage;
+  final Function(MessageModel, Matrix4) rotate;
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    var rotationMatrix = Matrix4.identity()..setEntry(3, 2, 0.001);
+
+    rotate(parsedMessage, rotationMatrix);
+
+    return Column(
+      children: <Widget>[
+        Chip(
+          label: Text('$title'),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Transform(
+            transform: rotationMatrix,
+            alignment: FractionalOffset.center,
+            child: Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(boxShadow: [
+                BoxShadow(
+                  color: Colors.grey,
+                  blurRadius: 20.0,
+                  spreadRadius: 5.0,
+                  offset: Offset(
+                    10.0,
+                    10.0,
+                  ),
+                )
+              ], color: parsedMessage.color),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
