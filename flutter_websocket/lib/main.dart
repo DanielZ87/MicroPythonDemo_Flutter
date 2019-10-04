@@ -174,21 +174,21 @@ class _MyHomePageState extends State<MyHomePage> {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: <Widget>[
                 new AxisWidget(
-                  title: 'Y',
+                  title: 'Y = ${parsedMessage.y.toInt()}',
                   parsedMessage: parsedMessage,
                   rotate: (message, matrix) {
                     matrix.rotateX(vector.radians(message.y));
                   },
                 ),
                 new AxisWidget(
-                  title: 'X',
+                  title: 'X  = ${parsedMessage.x.toInt()}',
                   parsedMessage: parsedMessage,
                   rotate: (message, matrix) {
                     matrix.rotateY(vector.radians(message.x));
                   },
                 ),
                 new AxisWidget(
-                  title: 'Z',
+                  title: 'Z = ${parsedMessage.z.toInt()}',
                   parsedMessage: parsedMessage,
                   rotate: (message, matrix) {
                     matrix.rotateZ(vector.radians(message.z));
@@ -251,11 +251,11 @@ class AxisWidget extends StatelessWidget {
               height: 100,
               decoration: BoxDecoration(boxShadow: [
                 BoxShadow(
-                  color: Colors.grey,
+                  color: Colors.grey[400],
                   blurRadius: 20.0,
-                  spreadRadius: 5.0,
+                  spreadRadius: 3.0,
                   offset: Offset(
-                    10.0,
+                    0.0,
                     10.0,
                   ),
                 )
