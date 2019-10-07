@@ -11,6 +11,7 @@ import 'package:web_socket_channel/html.dart';
 import 'package:vector_math/vector_math.dart' as vector;
 import 'models/MessageModel.dart';
 import 'models/TimeLineMessage.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
 void main() => runApp(MyApp());
 
@@ -47,6 +48,8 @@ class _MyHomePageState extends State<MyHomePage> {
   String _currentEndpoint = 'ws://echo.websocket.org';
 
   List<TimeLineMessage> messages = [];
+
+  final TextEditingController _commandSendController = TextEditingController();
 
   void _showSettingsDialog() async {
     var endpoint = await showDialog<String>(
@@ -175,75 +178,105 @@ class _MyHomePageState extends State<MyHomePage> {
           messages = messages.take(100).toList();
         }
 
-        return Column(
-          children: <Widget>[
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 20),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: <Widget>[
-                    new AxisWidget(
-                      title: 'X  = ${parsedMessage.x.toInt()}',
-                      parsedMessage: parsedMessage,
-                      rotate: (message, matrix) {
-                        matrix.rotateY(vector.radians(message.x));
-                      },
-                    ),
-                    new AxisWidget(
-                      title: 'Y = ${parsedMessage.y.toInt()}',
-                      parsedMessage: parsedMessage,
-                      rotate: (message, matrix) {
-                        matrix.rotateX(vector.radians(message.y));
-                      },
-                    ),
-                    new AxisWidget(
-                      title: 'Z = ${parsedMessage.z.toInt()}',
-                      parsedMessage: parsedMessage,
-                      rotate: (message, matrix) {
-                        matrix.rotateZ(vector.radians(message.z));
-                      },
-                    )
-                  ],
+        return Flexible(
+          flex: 1,
+          child: StaggeredGridView.count(
+            crossAxisCount: 2,
+            staggeredTiles: [
+              StaggeredTile.fit(2),
+              StaggeredTile.fit(1),
+              StaggeredTile.fit(1),
+            ],
+            children: <Widget>[
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: <Widget>[
+                      new AxisWidget(
+                        title: 'X  = ${parsedMessage.x.toInt()}',
+                        parsedMessage: parsedMessage,
+                        rotate: (message, matrix) {
+                          matrix.rotateY(vector.radians(message.x));
+                        },
+                      ),
+                      new AxisWidget(
+                        title: 'Y = ${parsedMessage.y.toInt()}',
+                        parsedMessage: parsedMessage,
+                        rotate: (message, matrix) {
+                          matrix.rotateX(vector.radians(message.y));
+                        },
+                      ),
+                      new AxisWidget(
+                        title: 'Z = ${parsedMessage.z.toInt()}',
+                        parsedMessage: parsedMessage,
+                        rotate: (message, matrix) {
+                          matrix.rotateZ(vector.radians(message.z));
+                        },
+                      )
+                    ],
+                  ),
                 ),
               ),
-            ),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Card(
-                child: ExpansionTile(
-                  leading: Icon(Icons.timeline),
-                  trailing: Chip(
-                    avatar: Icon(Icons.history),
-                    label: Text('${messages.length}'),
-                  ),
-                  title: Text(
-                      '${messages.isEmpty ? 'No data received yet' : messages[0].content}'),
-                  children: <Widget>[
-                    Align(
-                      alignment: Alignment.topLeft,
-                      child: SizedBox(
-                        height: 310,
-                        child: ListView.builder(
-                          itemCount: messages.length,
-                          itemBuilder: (context, index) {
-                            return ListTile(
-                              leading: Icon(Icons.history),
-                              title: Text(
-                                '${messages[index].content}',
-                                maxLines: 1,
-                              ),
-                              subtitle: Text('${messages[index].timeStamp}'),
-                            );
-                          },
+              Align(
+                alignment: Alignment.centerLeft,
+                child: MinConstrainedCardTile(
+                  child: ExpansionTile(
+                    leading: Icon(Icons.timeline),
+                    trailing: Chip(
+                      avatar: Icon(Icons.history),
+                      label: Text('${messages.length}'),
+                    ),
+                    title: Text(
+                        '${messages.isEmpty ? 'No data received yet' : messages[0].content}'),
+                    children: <Widget>[
+                      Align(
+                        alignment: Alignment.topLeft,
+                        child: SizedBox(
+                          height: 310,
+                          child: ListView.builder(
+                            itemCount: messages.length,
+                            itemBuilder: (context, index) {
+                              return ListTile(
+                                leading: Icon(Icons.history),
+                                title: Text(
+                                  '${messages[index].content}',
+                                  maxLines: 1,
+                                ),
+                                subtitle: Text('${messages[index].timeStamp}'),
+                              );
+                            },
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            )
-          ],
+              new MinConstrainedCardTile(
+                  child: Align(
+                alignment: Alignment.centerLeft,
+                child: ListTile(
+                  title: TextFormField(
+                    controller: _commandSendController,
+                    decoration: InputDecoration(
+                        hintText: 'Command',
+                        suffixIcon: IconButton(
+                          icon: Icon(Icons.send),
+                          onPressed: () {
+                            widget.channel.sink
+                                .add(_commandSendController.text);
+                            setState(() {
+                              _commandSendController.clear();
+                            });
+                          },
+                        )),
+                  ),
+                ),
+              ))
+            ],
+          ),
         );
       },
     );
@@ -262,5 +295,24 @@ class _MyHomePageState extends State<MyHomePage> {
     widget.channel.sink.close();
 
     super.dispose();
+  }
+}
+
+class MinConstrainedCardTile extends StatelessWidget {
+  const MinConstrainedCardTile({
+    Key key,
+    @required this.child,
+  }) : super(key: key);
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: ConstrainedBox(
+        child: child,
+        constraints: BoxConstraints(minHeight: 60),
+      ),
+    );
   }
 }
