@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart' as prefix0;
 import 'package:flutter_websocket/widgets/axisWidget.dart';
 import 'package:flutter_websocket/widgets/settingsDialog.dart';
@@ -9,6 +10,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/html.dart';
 import 'package:vector_math/vector_math.dart' as vector;
 import 'models/MessageModel.dart';
+import 'models/TimeLineMessage.dart';
 
 void main() => runApp(MyApp());
 
@@ -43,6 +45,8 @@ class _MyHomePageState extends State<MyHomePage> {
   double _zOffset = 0;
 
   String _currentEndpoint = 'ws://echo.websocket.org';
+
+  List<TimeLineMessage> messages = [];
 
   void _showSettingsDialog() async {
     var endpoint = await showDialog<String>(
@@ -86,66 +90,54 @@ class _MyHomePageState extends State<MyHomePage> {
           padding: const EdgeInsets.all(10.0),
           child: Column(
             mainAxisSize: MainAxisSize.max,
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: <Widget>[
-              Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: <Widget>[
-                    Text(
-                      'Response:',
-                    ),
-                    getResponseWidget(widget.channel)
-                  ],
-                ),
-              ),
+              getResponseWidget(widget.channel),
               Visibility(
                 visible: _currentEndpoint.contains("echo"),
-                child: ExpansionTile(
-                  title: Text('Echo control'),
-                  children: <Widget>[
-                    Text('X: $_xOffset'),
-                    Slider(
-                      min: -90,
-                      max: 90,
-                      value: _xOffset,
-                      onChanged: (newValue) {
-                        setState(() {
-                          _xOffset = newValue;
-                        });
-                        sendManualValues();
-                      },
-                    ),
-                    Text('Y: $_yOffset'),
-                    Slider(
-                      min: -90,
-                      max: 90,
-                      value: _yOffset,
-                      onChanged: (newValue) {
-                        setState(() => _yOffset = newValue);
-                        sendManualValues();
-                      },
-                    ),
-                    Text('Z: $_zOffset'),
-                    Slider(
-                      min: -90,
-                      max: 90,
-                      value: _zOffset,
-                      onChanged: (newValue) {
-                        setState(() => _zOffset = newValue);
-                        sendManualValues();
-                      },
-                    )
-                  ],
+                child: Card(
+                  child: ExpansionTile(
+                    title: Text('Echo control'),
+                    children: <Widget>[
+                      Text('X: $_xOffset'),
+                      Slider(
+                        min: -90,
+                        max: 90,
+                        value: _xOffset,
+                        onChanged: (newValue) {
+                          setState(() {
+                            _xOffset = newValue;
+                          });
+                          sendManualValues();
+                        },
+                      ),
+                      Text('Y: $_yOffset'),
+                      Slider(
+                        min: -90,
+                        max: 90,
+                        value: _yOffset,
+                        onChanged: (newValue) {
+                          setState(() => _yOffset = newValue);
+                          sendManualValues();
+                        },
+                      ),
+                      Text('Z: $_zOffset'),
+                      Slider(
+                        min: -90,
+                        max: 90,
+                        value: _zOffset,
+                        onChanged: (newValue) {
+                          setState(() => _zOffset = newValue);
+                          sendManualValues();
+                        },
+                      )
+                    ],
+                  ),
                 ),
               )
             ],
           ),
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showSettingsDialog,
-        child: Icon(Icons.settings),
       ),
     );
   }
@@ -175,42 +167,82 @@ class _MyHomePageState extends State<MyHomePage> {
           );
         }
 
-        var parsedMessage = MessageModel('${snapshot.data}');
+        var rawMessage = '${snapshot.data}';
+        var parsedMessage = MessageModel(rawMessage);
+
+        if (snapshot.hasData) {
+          messages.insert(0, TimeLineMessage(rawMessage));
+          messages = messages.take(100).toList();
+        }
 
         return Column(
           children: <Widget>[
-            Text(
-              snapshot.hasData
-                  ? '${snapshot.data}'
-                  : '${snapshot.connectionState}',
-              style: TextStyle(color: parsedMessage.color),
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: <Widget>[
-                new AxisWidget(
-                  title: 'X  = ${parsedMessage.x.toInt()}',
-                  parsedMessage: parsedMessage,
-                  rotate: (message, matrix) {
-                    matrix.rotateY(vector.radians(message.x));
-                  },
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: <Widget>[
+                    new AxisWidget(
+                      title: 'X  = ${parsedMessage.x.toInt()}',
+                      parsedMessage: parsedMessage,
+                      rotate: (message, matrix) {
+                        matrix.rotateY(vector.radians(message.x));
+                      },
+                    ),
+                    new AxisWidget(
+                      title: 'Y = ${parsedMessage.y.toInt()}',
+                      parsedMessage: parsedMessage,
+                      rotate: (message, matrix) {
+                        matrix.rotateX(vector.radians(message.y));
+                      },
+                    ),
+                    new AxisWidget(
+                      title: 'Z = ${parsedMessage.z.toInt()}',
+                      parsedMessage: parsedMessage,
+                      rotate: (message, matrix) {
+                        matrix.rotateZ(vector.radians(message.z));
+                      },
+                    )
+                  ],
                 ),
-                new AxisWidget(
-                  title: 'Y = ${parsedMessage.y.toInt()}',
-                  parsedMessage: parsedMessage,
-                  rotate: (message, matrix) {
-                    matrix.rotateX(vector.radians(message.y));
-                  },
-                ),
-                new AxisWidget(
-                  title: 'Z = ${parsedMessage.z.toInt()}',
-                  parsedMessage: parsedMessage,
-                  rotate: (message, matrix) {
-                    matrix.rotateZ(vector.radians(message.z));
-                  },
-                )
-              ],
+              ),
             ),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Card(
+                child: ExpansionTile(
+                  leading: Icon(Icons.timeline),
+                  trailing: Chip(
+                    avatar: Icon(Icons.history),
+                    label: Text('${messages.length}'),
+                  ),
+                  title: Text(
+                      '${messages.isEmpty ? 'No data received yet' : messages[0].content}'),
+                  children: <Widget>[
+                    Align(
+                      alignment: Alignment.topLeft,
+                      child: SizedBox(
+                        height: 310,
+                        child: ListView.builder(
+                          itemCount: messages.length,
+                          itemBuilder: (context, index) {
+                            return ListTile(
+                              leading: Icon(Icons.history),
+                              title: Text(
+                                '${messages[index].content}',
+                                maxLines: 1,
+                              ),
+                              subtitle: Text('${messages[index].timeStamp}'),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
           ],
         );
       },
