@@ -2,6 +2,8 @@ import 'dart:math';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart' as prefix0;
+import 'package:flutter_websocket/widgets/axisWidget.dart';
+import 'package:flutter_websocket/widgets/settingsDialog.dart';
 //import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/html.dart';
@@ -149,7 +151,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void sendManualValues() {
-    widget.channel.sink.add('255,0;$_xOffset,$_yOffset,$_zOffset');
+    widget.channel.sink.add('0,0;$_xOffset,$_yOffset,$_zOffset');
   }
 
   Widget getResponseWidget(WebSocketChannel channel) {
@@ -187,17 +189,17 @@ class _MyHomePageState extends State<MyHomePage> {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: <Widget>[
                 new AxisWidget(
-                  title: 'Y = ${parsedMessage.y.toInt()}',
-                  parsedMessage: parsedMessage,
-                  rotate: (message, matrix) {
-                    matrix.rotateX(vector.radians(message.y));
-                  },
-                ),
-                new AxisWidget(
                   title: 'X  = ${parsedMessage.x.toInt()}',
                   parsedMessage: parsedMessage,
                   rotate: (message, matrix) {
                     matrix.rotateY(vector.radians(message.x));
+                  },
+                ),
+                new AxisWidget(
+                  title: 'Y = ${parsedMessage.y.toInt()}',
+                  parsedMessage: parsedMessage,
+                  rotate: (message, matrix) {
+                    matrix.rotateX(vector.radians(message.y));
                   },
                 ),
                 new AxisWidget(
@@ -228,86 +230,5 @@ class _MyHomePageState extends State<MyHomePage> {
     widget.channel.sink.close();
 
     super.dispose();
-  }
-}
-
-class SettingsDialog extends StatelessWidget {
-  SettingsDialog({
-    Key key,
-    @required String connection,
-  }) : super(key: key) {
-    controller.text = connection;
-  }
-
-  final TextEditingController controller = TextEditingController();
-
-  @override
-  Widget build(BuildContext context) {
-    return SimpleDialog(
-      title: Text('Settings'),
-      contentPadding: const EdgeInsets.all(10),
-      children: <Widget>[
-        TextField(
-          controller: controller,
-          decoration: InputDecoration(labelText: 'Endpoint'),
-        ),
-        RaisedButton(
-          child: Text("Connect"),
-          onPressed: () {
-            Navigator.pop(context, controller.text);
-          },
-        )
-      ],
-    );
-  }
-}
-
-class AxisWidget extends StatelessWidget {
-  const AxisWidget({
-    Key key,
-    @required this.parsedMessage,
-    @required this.rotate,
-    @required this.title,
-  }) : super(key: key);
-
-  final MessageModel parsedMessage;
-  final Function(MessageModel, Matrix4) rotate;
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    var rotationMatrix = Matrix4.identity()..setEntry(3, 2, 0.001);
-
-    rotate(parsedMessage, rotationMatrix);
-
-    return Column(
-      children: <Widget>[
-        Chip(
-          label: Text('$title'),
-        ),
-        Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Transform(
-            transform: rotationMatrix,
-            alignment: FractionalOffset.center,
-            child: Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(boxShadow: [
-                BoxShadow(
-                  color: Colors.grey[400],
-                  blurRadius: 20.0,
-                  spreadRadius: 3.0,
-                  offset: Offset(
-                    0.0,
-                    10.0,
-                  ),
-                )
-              ], color: parsedMessage.color),
-            ),
-          ),
-        ),
-      ],
-    );
   }
 }
