@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart' as prefix0;
 //import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/html.dart';
@@ -14,11 +15,12 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Demo',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: MyHomePage(title: 'Flutter Demo Home Page'),
+      home: MyHomePage(title: 'Welcome'),
     );
   }
 }
@@ -34,25 +36,33 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
   double _xOffset = 0;
   double _yOffset = 0;
   double _zOffset = 0;
 
-  final TextEditingController _connectionController =
-      TextEditingController(text: 'ws://echo.websocket.org');
+  String _currentEndpoint = 'ws://echo.websocket.org';
 
-  void _incrementCounter() {
+  void _showSettingsDialog() async {
+    var endpoint = await showDialog<String>(
+        context: context,
+        builder: (context) {
+          return new SettingsDialog(
+            connection: _currentEndpoint,
+          );
+        });
+
+    _onConnect(endpoint);
+
     setState(() {
-      _counter += 10;
-
-      var green = max(255 - _counter, 0);
-
-      var red = max(-255 + _counter, 0);
-
-      widget.channel.sink.add('$red,$green,0');
+      _currentEndpoint = endpoint;
     });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    _onConnect(_currentEndpoint);
   }
 
   @override
@@ -60,77 +70,77 @@ class _MyHomePageState extends State<MyHomePage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
+        actions: <Widget>[
+          ButtonBar(
+            children: <Widget>[
+              IconButton(
+                  icon: Icon(Icons.settings), onPressed: _showSettingsDialog),
+            ],
+          )
+        ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(10.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.max,
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: <Widget>[
-            TextFormField(
-              controller: _connectionController,
-              decoration: InputDecoration(labelText: 'Endpoint'),
-            ),
-            RaisedButton(
-              child: Text("Connect"),
-              onPressed: _onConnect,
-            ),
-            Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  Text(
-                    'Response:',
-                  ),
-                  getResponseWidget(widget.channel)
-                ],
+      body: Container(
+        child: Padding(
+          padding: const EdgeInsets.all(10.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.max,
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: <Widget>[
+              Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    Text(
+                      'Response:',
+                    ),
+                    getResponseWidget(widget.channel)
+                  ],
+                ),
               ),
-            ),
-            ExpansionTile(
-              title: Text('Manual correction'),
-              children: <Widget>[
-                Text('$_xOffset'),
-                Slider(
-                  min: -90,
-                  max: 90,
-                  value: _xOffset,
-                  onChanged: (newValue) {
-                    setState(() {
-                      _xOffset = newValue;
-                    });
-
-                    sendManualValues();
-                  },
-                ),
-                Slider(
-                  min: -90,
-                  max: 90,
-                  value: _yOffset,
-                  onChanged: (newValue) {
-                    setState(() => _yOffset = newValue);
-
-                    sendManualValues();
-                  },
-                ),
-                Slider(
-                  min: -90,
-                  max: 90,
-                  value: _zOffset,
-                  onChanged: (newValue) {
-                    setState(() => _zOffset = newValue);
-
-                    sendManualValues();
-                  },
-                )
-              ],
-            )
-          ],
+              ExpansionTile(
+                title: Text('Echo control'),
+                children: <Widget>[
+                  Text('X: $_xOffset'),
+                  Slider(
+                    min: -90,
+                    max: 90,
+                    value: _xOffset,
+                    onChanged: (newValue) {
+                      setState(() {
+                        _xOffset = newValue;
+                      });
+                      sendManualValues();
+                    },
+                  ),
+                  Text('Y: $_yOffset'),
+                  Slider(
+                    min: -90,
+                    max: 90,
+                    value: _yOffset,
+                    onChanged: (newValue) {
+                      setState(() => _yOffset = newValue);
+                      sendManualValues();
+                    },
+                  ),
+                  Text('Z: $_zOffset'),
+                  Slider(
+                    min: -90,
+                    max: 90,
+                    value: _zOffset,
+                    onChanged: (newValue) {
+                      setState(() => _zOffset = newValue);
+                      sendManualValues();
+                    },
+                  )
+                ],
+              )
+            ],
+          ),
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: Icon(Icons.add),
+        onPressed: _showSettingsDialog,
+        child: Icon(Icons.settings),
       ),
     );
   }
@@ -202,11 +212,11 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  void _onConnect() {
+  void _onConnect(String endpoint) {
     setState(() {
-      widget.channel = HtmlWebSocketChannel.connect(_connectionController.text);
+      widget.channel = HtmlWebSocketChannel.connect(endpoint);
 
-      widget.channel.sink.add('255,0;45,0,0');
+      //widget.channel.sink.add('255,0;45,0,0');
     });
   }
 
@@ -215,6 +225,37 @@ class _MyHomePageState extends State<MyHomePage> {
     widget.channel.sink.close();
 
     super.dispose();
+  }
+}
+
+class SettingsDialog extends StatelessWidget {
+  SettingsDialog({
+    Key key,
+    @required String connection,
+  }) : super(key: key) {
+    controller.text = connection;
+  }
+
+  final TextEditingController controller = TextEditingController();
+
+  @override
+  Widget build(BuildContext context) {
+    return SimpleDialog(
+      title: Text('Settings'),
+      contentPadding: const EdgeInsets.all(10),
+      children: <Widget>[
+        TextField(
+          controller: controller,
+          decoration: InputDecoration(labelText: 'Endpoint'),
+        ),
+        RaisedButton(
+          child: Text("Connect"),
+          onPressed: () {
+            Navigator.pop(context, controller.text);
+          },
+        )
+      ],
+    );
   }
 }
 
