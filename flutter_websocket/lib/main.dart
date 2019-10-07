@@ -97,42 +97,45 @@ class _MyHomePageState extends State<MyHomePage> {
                   ],
                 ),
               ),
-              ExpansionTile(
-                title: Text('Echo control'),
-                children: <Widget>[
-                  Text('X: $_xOffset'),
-                  Slider(
-                    min: -90,
-                    max: 90,
-                    value: _xOffset,
-                    onChanged: (newValue) {
-                      setState(() {
-                        _xOffset = newValue;
-                      });
-                      sendManualValues();
-                    },
-                  ),
-                  Text('Y: $_yOffset'),
-                  Slider(
-                    min: -90,
-                    max: 90,
-                    value: _yOffset,
-                    onChanged: (newValue) {
-                      setState(() => _yOffset = newValue);
-                      sendManualValues();
-                    },
-                  ),
-                  Text('Z: $_zOffset'),
-                  Slider(
-                    min: -90,
-                    max: 90,
-                    value: _zOffset,
-                    onChanged: (newValue) {
-                      setState(() => _zOffset = newValue);
-                      sendManualValues();
-                    },
-                  )
-                ],
+              Visibility(
+                visible: _currentEndpoint.contains("echo"),
+                child: ExpansionTile(
+                  title: Text('Echo control'),
+                  children: <Widget>[
+                    Text('X: $_xOffset'),
+                    Slider(
+                      min: -90,
+                      max: 90,
+                      value: _xOffset,
+                      onChanged: (newValue) {
+                        setState(() {
+                          _xOffset = newValue;
+                        });
+                        sendManualValues();
+                      },
+                    ),
+                    Text('Y: $_yOffset'),
+                    Slider(
+                      min: -90,
+                      max: 90,
+                      value: _yOffset,
+                      onChanged: (newValue) {
+                        setState(() => _yOffset = newValue);
+                        sendManualValues();
+                      },
+                    ),
+                    Text('Z: $_zOffset'),
+                    Slider(
+                      min: -90,
+                      max: 90,
+                      value: _zOffset,
+                      onChanged: (newValue) {
+                        setState(() => _zOffset = newValue);
+                        sendManualValues();
+                      },
+                    )
+                  ],
+                ),
               )
             ],
           ),
