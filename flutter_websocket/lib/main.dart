@@ -1,15 +1,12 @@
-import 'dart:math';
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/scheduler.dart' as prefix0;
 import 'package:flutter_websocket/widgets/axisWidget.dart';
 import 'package:flutter_websocket/widgets/settingsDialog.dart';
 //import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/html.dart';
 import 'package:vector_math/vector_math.dart' as vector;
-import 'models/MessageModel.dart';
+import 'package:flutter_websocket/models/MessageModel.dart';
 import 'models/TimeLineMessage.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
