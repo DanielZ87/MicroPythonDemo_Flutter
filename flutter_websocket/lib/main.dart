@@ -5,7 +5,6 @@ import 'package:flutter_websocket/widgets/settingsDialog.dart';
 //import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/html.dart';
-import 'package:vector_math/vector_math.dart' as vector;
 import 'package:flutter_websocket/models/MessageModel.dart';
 import 'models/TimeLineMessage.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
@@ -179,6 +178,7 @@ class _MyHomePageState extends State<MyHomePage> {
           flex: 1,
           child: StaggeredGridView.count(
             crossAxisCount: 2,
+            physics: NeverScrollableScrollPhysics(),
             staggeredTiles: [
               StaggeredTile.fit(2),
               StaggeredTile.fit(1),
@@ -194,22 +194,27 @@ class _MyHomePageState extends State<MyHomePage> {
                       new AxisWidget(
                         title: 'X  = ${parsedMessage.x.toInt()}',
                         parsedMessage: parsedMessage,
-                        rotate: (message, matrix) {
-                          matrix.rotateY(vector.radians(message.x));
+                        rotationValueAccessor: (message, offset) =>
+                            message.x - offset.dx,
+                        rotate: (rotationValue, matrix) {
+                          matrix.rotateY(rotationValue);
                         },
                       ),
                       new AxisWidget(
                         title: 'Y = ${parsedMessage.y.toInt()}',
                         parsedMessage: parsedMessage,
-                        rotate: (message, matrix) {
-                          matrix.rotateX(vector.radians(message.y));
+                        rotationValueAccessor: (message, offset) =>
+                            message.y + offset.dy,
+                        rotate: (rotationValue, matrix) {
+                          matrix.rotateX(rotationValue);
                         },
                       ),
                       new AxisWidget(
                         title: 'Z = ${parsedMessage.z.toInt()}',
                         parsedMessage: parsedMessage,
-                        rotate: (message, matrix) {
-                          matrix.rotateZ(vector.radians(message.z));
+                        rotationValueAccessor: (message, offset) => message.z + offset.dx,
+                        rotate: (rotationValue, matrix) {
+                          matrix.rotateZ(rotationValue);
                         },
                       )
                     ],
