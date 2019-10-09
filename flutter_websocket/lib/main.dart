@@ -1,3 +1,4 @@
+import 'dart:html';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_websocket/widgets/axisWidget.dart';
@@ -21,7 +22,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: MyHomePage(title: 'Welcome'),
+      home: MyHomePage(title: 'MicroPython Demo'),
     );
   }
 }
@@ -41,7 +42,8 @@ class _MyHomePageState extends State<MyHomePage> {
   double _yOffset = 0;
   double _zOffset = 0;
 
-  String _currentEndpoint = 'ws://echo.websocket.org';
+  // String _currentEndpoint = 'ws://echo.websocket.org';
+  String _currentEndpoint = 'ws://${Uri.parse(window.location.href).host}';
 
   List<TimeLineMessage> messages = [];
 
@@ -212,7 +214,8 @@ class _MyHomePageState extends State<MyHomePage> {
                       new AxisWidget(
                         title: 'Z = ${parsedMessage.z.toInt()}',
                         parsedMessage: parsedMessage,
-                        rotationValueAccessor: (message, offset) => message.z + offset.dx,
+                        rotationValueAccessor: (message, offset) =>
+                            message.z + offset.dx,
                         rotate: (rotationValue, matrix) {
                           matrix.rotateZ(rotationValue);
                         },
