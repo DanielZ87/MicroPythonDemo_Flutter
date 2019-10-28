@@ -47,7 +47,7 @@ class _AxisWidgetState extends State<AxisWidget> {
               alignment: FractionalOffset.center,
               child: Container(
                 width: 100,
-                height: 100,
+                height: 200,
                 decoration: BoxDecoration(boxShadow: [
                   BoxShadow(
                     color: Colors.grey[400],
