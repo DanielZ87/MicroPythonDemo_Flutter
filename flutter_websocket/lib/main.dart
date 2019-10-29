@@ -1,14 +1,17 @@
 import 'dart:html';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_websocket/bloc/websocketchannel_bloc.dart';
+import 'package:flutter_websocket/bloc/websocketchannel_event.dart';
+import 'package:flutter_websocket/bloc/websocketchannel_state.dart';
+import 'package:flutter_websocket/models/TimeLineMessage.dart';
 import 'package:flutter_websocket/widgets/axisWidget.dart';
 import 'package:flutter_websocket/widgets/settingsDialog.dart';
 //import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/html.dart';
 import 'package:flutter_websocket/models/MessageModel.dart';
-import 'models/TimeLineMessage.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
 void main() => runApp(MyApp());
@@ -23,7 +26,9 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: MyHomePage(title: 'MicroPython Demo'),
+      home: BlocProvider(
+          builder: (context) => WebsocketchannelBloc(),
+          child: MyHomePage(title: 'MicroPython Demo')),
     );
   }
 }
@@ -45,10 +50,11 @@ class _MyHomePageState extends State<MyHomePage>
   double _zOffset = 0;
   double _zoom = 1;
 
-  String _currentEndpoint = 'ws://echo.websocket.org';
-  // String _currentEndpoint = 'ws://${Uri.parse(window.location.href).host}';
+  WebsocketchannelBloc _getBloc(BuildContext context) =>
+      BlocProvider.of<WebsocketchannelBloc>(context);
 
-  List<TimeLineMessage> messages = [];
+  // String _currentEndpoint = 'ws://echo.websocket.org';
+  String _currentEndpoint = 'ws://${Uri.parse(window.location.href).host}:500';
 
   final TextEditingController _commandSendController = TextEditingController();
 
@@ -96,12 +102,44 @@ class _MyHomePageState extends State<MyHomePage>
             mainAxisSize: MainAxisSize.max,
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: <Widget>[
-              Flexible(child: getResponseWidget(widget.channel)),
+              Flexible(
+                  child:
+                      BlocBuilder<WebsocketchannelBloc, WebsocketchannelState>(
+                bloc: _getBloc(context),
+                builder: (context, state) {
+                  if (state is ErrorWebsocketchannelState) {
+                    return buildError(state);
+                  }
+
+                  if (state is ConnectedWebsocketchannelState) {
+                    return buildMessages(state.messages);
+                  }
+
+                  if (state is ConnectingWebsocketchannelState) {
+                    return Center(child: CircularProgressIndicator());
+                  }
+
+                  return Text(state.toString());
+                },
+              )),
               buildEchoControl()
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Row buildError(ErrorWebsocketchannelState state) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: <Widget>[
+        Icon(
+          Icons.error,
+          color: Colors.red,
+        ),
+        Text(state.errorMessage),
+      ],
     );
   }
 
@@ -162,67 +200,40 @@ class _MyHomePageState extends State<MyHomePage>
 
   void sendManualValues() {
     print('Sending Echo-Values');
-    widget.channel.sink.add('0,0;$_xOffset,$_yOffset,$_zOffset');
+    widget.channel.sink.add('255,0;$_xOffset,$_yOffset,$_zOffset');
   }
 
-  Widget getResponseWidget(WebSocketChannel channel) {
-    if (channel == null) {
-      return Text('Please connect first');
-    }
+  Widget buildMessages(List<TimeLineMessage> messages) {
+    var parsedMessage =
+        MessageModel(messages.isEmpty ? '' : messages.first.content);
 
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         var columnOccupyCount = constraints.maxWidth < 800 ? 2 : 1;
 
-        return StreamBuilder<String>(
-          stream: widget.channel.stream,
-          builder: (context, snapshot) {
-            if (snapshot.hasError) {
-              return Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  Icon(
-                    Icons.error,
-                    color: Colors.red,
-                  ),
-                  Text('${snapshot.error}'),
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.max,
+          children: <Widget>[
+            buildAxis(parsedMessage),
+            Flexible(
+              flex: 1,
+              child: StaggeredGridView.count(
+                crossAxisCount: 2,
+                // physics: NeverScrollableScrollPhysics(),
+                staggeredTiles: [
+                  // StaggeredTile.fit(columnCount),
+                  StaggeredTile.fit(columnOccupyCount),
+                  StaggeredTile.fit(columnOccupyCount),
                 ],
-              );
-            }
-            print('Building from Stream');
-            var rawMessage = '${snapshot.data}';
-            var parsedMessage = MessageModel(rawMessage);
-
-            if (snapshot.hasData) {
-              messages.insert(0, TimeLineMessage(rawMessage));
-              messages = messages.take(100).toList();
-            }
-
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.max,
-              children: <Widget>[
-                buildAxis(parsedMessage),
-                Flexible(
-                  flex: 1,
-                  child: StaggeredGridView.count(
-                    crossAxisCount: 2,
-                    // physics: NeverScrollableScrollPhysics(),
-                    staggeredTiles: [
-                      // StaggeredTile.fit(columnCount),
-                      StaggeredTile.fit(columnOccupyCount),
-                      StaggeredTile.fit(columnOccupyCount),
-                    ],
-                    children: <Widget>[
-                      // buildAxis(parsedMessage),
-                      buildHistory(),
-                      buildCommand()
-                    ],
-                  ),
-                ),
-              ],
-            );
-          },
+                children: <Widget>[
+                  // buildAxis(parsedMessage),
+                  buildHistory(messages),
+                  buildCommand()
+                ],
+              ),
+            ),
+          ],
         );
       },
     );
@@ -251,7 +262,7 @@ class _MyHomePageState extends State<MyHomePage>
     ));
   }
 
-  Widget buildHistory() {
+  Widget buildHistory(List<TimeLineMessage> messages) {
     return Align(
       alignment: Alignment.centerLeft,
       child: MinConstrainedCardTile(
@@ -267,9 +278,7 @@ class _MyHomePageState extends State<MyHomePage>
             onDeleted: messages.isEmpty
                 ? null
                 : () {
-                    setState(() {
-                      messages.clear();
-                    });
+                    _getBloc(context).add(ClearMessageHistoryEvent());
                   },
           ),
           title: Text(
@@ -318,19 +327,11 @@ class _MyHomePageState extends State<MyHomePage>
             new AxisWidget(
               title: 'Y = ${parsedMessage.y.toInt()}',
               parsedMessage: parsedMessage,
-              rotationValueAccessor: (message, offset) => message.y - offset.dx,
+              rotationValueAccessor: (message, offset) => message.y + offset.dx,
               rotate: (rotationValue, matrix) {
                 matrix.rotateY(rotationValue);
               },
             ),
-            new AxisWidget(
-              title: 'Z = ${parsedMessage.z.toInt()}',
-              parsedMessage: parsedMessage,
-              rotationValueAccessor: (message, offset) => message.z + offset.dx,
-              rotate: (rotationValue, matrix) {
-                matrix.rotateZ(rotationValue);
-              },
-            )
           ],
         ),
       ),
@@ -338,10 +339,13 @@ class _MyHomePageState extends State<MyHomePage>
   }
 
   void _onConnect(String endpoint) {
-    setState(() {
-      widget.channel = HtmlWebSocketChannel.connect(endpoint);
+    _getBloc(context).add(ConnectingChannelEvent());
 
-      //widget.channel.sink.add('255,0;45,0,0');
+    widget.channel = HtmlWebSocketChannel.connect(endpoint);
+    widget.channel.stream.listen((onData) {
+      _getBloc(context).add(IncommingMessageEvent(onData.toString()));
+    }, onError: (error) {
+      _getBloc(context).add(ChannelErrorEvent(error.toString()));
     });
   }
 
