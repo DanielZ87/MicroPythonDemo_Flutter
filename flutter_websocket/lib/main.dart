@@ -48,7 +48,8 @@ class _MyHomePageState extends State<MyHomePage>
   double _xOffset = 0;
   double _yOffset = 0;
   double _zOffset = 0;
-  double _zoom = 1;
+
+  bool _linkBackgroundColor = false;
 
   WebsocketchannelBloc _getBloc(BuildContext context) =>
       BlocProvider.of<WebsocketchannelBloc>(context);
@@ -181,16 +182,6 @@ class _MyHomePageState extends State<MyHomePage>
                 setState(() => _zOffset = newValue);
                 sendManualValues();
               },
-            ),
-            Text('Zoom: $_zoom'),
-            Slider(
-              min: -1,
-              max: 1,
-              value: _zoom,
-              onChanged: (newValue) {
-                setState(() => _zoom = newValue);
-                // sendManualValues();
-              },
             )
           ],
         ),
@@ -311,6 +302,9 @@ class _MyHomePageState extends State<MyHomePage>
 
   Widget buildAxis(MessageModel parsedMessage) {
     return Card(
+      color: _linkBackgroundColor
+          ? parsedMessage.color.withAlpha(150)
+          : Colors.white,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 20),
         child: Row(
@@ -323,6 +317,22 @@ class _MyHomePageState extends State<MyHomePage>
               rotate: (rotationValue, matrix) {
                 matrix.rotateX(rotationValue);
               },
+            ),
+            Column(
+              children: <Widget>[
+                Icon(
+                  Icons.remove_red_eye,
+                  color: _linkBackgroundColor ? Colors.white : Colors.black45,
+                ),
+                Switch(
+                    activeColor: Colors.white,
+                    value: _linkBackgroundColor,
+                    onChanged: (newValue) {
+                      setState(() {
+                        _linkBackgroundColor = newValue;
+                      });
+                    })
+              ],
             ),
             new AxisWidget(
               title: 'Y = ${parsedMessage.y.toInt()}',
