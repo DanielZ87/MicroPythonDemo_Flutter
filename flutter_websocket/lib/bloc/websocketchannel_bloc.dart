@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:bloc/bloc.dart';
-import 'package:flutter_websocket/models/TimeLineMessage.dart';
+import 'package:flutter_websocket/models/timeLineMessage.dart';
 import './bloc.dart';
 
 class WebsocketchannelBloc

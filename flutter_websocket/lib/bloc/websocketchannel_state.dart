@@ -1,4 +1,4 @@
-import 'package:flutter_websocket/models/TimeLineMessage.dart';
+import 'package:flutter_websocket/models/timeLineMessage.dart';
 import 'package:meta/meta.dart';
 
 @immutable

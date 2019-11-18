@@ -1,7 +1,6 @@
 import 'dart:math';
-
 import 'package:flutter/material.dart';
-import 'package:flutter_websocket/models/MessageModel.dart';
+import 'package:flutter_websocket/models/messageModel.dart';
 import 'package:vector_math/vector_math.dart' as vector;
 
 class AxisWidget extends StatefulWidget {
@@ -58,7 +57,6 @@ class _AxisWidgetState extends State<AxisWidget> {
               alignment: FractionalOffset.center,
               child: SizedBox(
                 height: 300,
-                // width: 100,
                 child: Container(
                   child: Image.asset(
                     getBoardImageFromAngle(rotationValue),
